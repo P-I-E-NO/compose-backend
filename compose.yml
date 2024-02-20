@@ -59,6 +59,7 @@ services:
       - CONN_URI=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
       - RUST_LOG=trace
       - JWT_SECRET=Poggaceo
+      - JSON_DOCS_URL=/json-docs
 
   cars:
     container_name: cars-app
@@ -72,6 +73,7 @@ services:
       - CONN_URI=postgresql://dockerissimo_rust:pass@cars_db:5432/fantastic_db
       - RUST_LOG=trace
       - JWT_SECRET=Poggaceo
+      - JSON_DOCS_URL=https://api.pieno.cloud/cars/json-docs
 
   queue:
     image: redis:7.2.3
