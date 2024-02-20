@@ -5,16 +5,84 @@ networks:
     name: pieno-net
 
 services:
+
+  api_gateway:
+    image: nginxinc/nginx-unprivileged
+    networks:
+      - pieno-net
+    ports:
+      - "14000:14000"
+    volumes:
+      - ./hosts.conf:/etc/nginx/conf.d/hosts.conf
+    depends_on: # needed because otherwise nginx won't resolve the containers
+      - users
+      - cars
+      - fuel_meter
+
+  users_db:
+    image: postgres:16.1
+    networks:
+      - pieno-net
+    environment:
+      - POSTGRES_USER=dockerissimo_rust
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=fantastic_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d fantastic_db -U dockerissimo_rust"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cars_db:
+    image: postgres:16.1
+    networks:
+      - pieno-net
+    environment:
+      - POSTGRES_USER=dockerissimo_rust
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=fantastic_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d fantastic_db -U dockerissimo_rust"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  users:
+    container_name: users-app
+    image: emilianomaccaferri/pieno-users
+    depends_on:
+      users_db:
+        condition: service_healthy
+    networks:
+      - pieno-net
+    environment:
+      - CONN_URI=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
+      - RUST_LOG=trace
+      - JWT_SECRET=Poggaceo
+
+  cars:
+    container_name: cars-app
+    image: emilianomaccaferri/pieno-cars
+    depends_on:
+      cars_db:
+        condition: service_healthy
+    networks:
+      - pieno-net
+    environment:
+      - CONN_URI=postgresql://dockerissimo_rust:pass@cars_db:5432/fantastic_db
+      - RUST_LOG=trace
+      - JWT_SECRET=Poggaceo
+
   queue:
     image: redis:7.2.3
     networks:
       - pieno-net
 
-  fuel-notifier: 
+  fuel_notifier: 
     image: emilianomaccaferri/pieno-fuel-notifier
-    deploy:
-      replicas: 3
-      mode: dnsrr
+    #deploy:
+    #  replicas: 3
+    #  mode: dnsrr
     environment:
       - NOTIFICATION_GROUP=notification_listeners
       - BLOCK_TIME=60000 # how much should the consumer block for? 
@@ -22,20 +90,19 @@ services:
       - REDIS_URL=redis://queue
       - ITEM_COUNT=10
       - DEAD_KEY_EXPIRY=100000 # how much time should pass before autoclaiming messages?
-      - TELOXIDE_TOKEN=
-      - TELEGRAM_CHAT_ID=-1002078353837 
     networks:
       - pieno-net
     
-  fuel-meter:
+  fuel_meter:
     image: emilianomaccaferri/pieno-fuel-meter
-    deploy:
-      replicas: 3
+    #deploy:
+    #  replicas: 3
+    #  mode: dnsrr
     environment:
       - HTTP_PORT=3000
       - APP_NAME=fuel-meter-api
       - REDIS_URL=redis://queue
-      - JWT_KEY=jwt_key_here
+      - JWT_KEY=Poggaceo
       - RUST_BACKTRACE=1
       - RUST_LOG=trace
       - REDIS_STREAM=streams:notifications
