@@ -18,6 +18,12 @@ services:
       - users
       - cars
       - fuel_meter
+      - swagger_ui
+
+  swagger_ui:
+    image: swaggerapi/swagger-ui
+    networks:
+      - pieno-net
 
   users_db:
     image: postgres:16.1
@@ -49,7 +55,7 @@ services:
 
   users:
     container_name: users-app
-    image: emilianomaccaferri/pieno-users
+    image: emilianomaccaferri/pieno-users:latest
     depends_on:
       users_db:
         condition: service_healthy
@@ -59,11 +65,10 @@ services:
       - CONN_URI=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
       - RUST_LOG=trace
       - JWT_SECRET=Poggaceo
-      - JSON_DOCS_URL=/json-docs
 
   cars:
     container_name: cars-app
-    image: emilianomaccaferri/pieno-cars
+    image: emilianomaccaferri/pieno-cars:latest
     depends_on:
       cars_db:
         condition: service_healthy
@@ -73,7 +78,6 @@ services:
       - CONN_URI=postgresql://dockerissimo_rust:pass@cars_db:5432/fantastic_db
       - RUST_LOG=trace
       - JWT_SECRET=Poggaceo
-      - JSON_DOCS_URL=https://api.pieno.cloud/cars/json-docs
 
   queue:
     image: redis:7.2.3
