@@ -1,3 +1,6 @@
 [submodule "cloud-migrations"]
 	path = cloud-migrations
 	url = https://github.com/p-i-e-no/cloud-migrations
+[submodule "ml_pieno_predictions"]
+	path = ml_pieno_predictions
+	url = https://github.com/P-I-E-NO/ml_pieno_predictions

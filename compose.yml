@@ -3,6 +3,9 @@ version: '3.9'
 networks:
   pieno-net:
     name: pieno-net
+  
+volumes:
+  predictions_db_data:
 
 services:
 
@@ -19,11 +22,45 @@ services:
       - cars
       - fuel_meter
       - swagger_ui
+      - predictions_api
 
   swagger_ui:
     image: swaggerapi/swagger-ui
     networks:
       - pieno-net
+
+  ## AI STUFF
+  
+  my_sql: 
+    image: "mysql:8.3.0"
+    environment:
+      - MYSQL_USER=fre
+      - MYSQL_PASSWORD=password
+      - MYSQL_DATABASE=pieno
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+    volumes:
+      - predictions_db_data:/var/lib/mysql
+    networks:
+      - pieno-net
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  predictions_api:
+    image: emilianomaccaferri/pieno-predict-api:latest
+    networks:
+      - pieno-net
+    environment:
+      - MYSQL_USER=fre
+      - MYSQL_PASSWORD=password
+      - MYSQL_DATABASE=pieno
+    depends_on:
+      my_sql:
+        condition: service_healthy
+  
+  ## END AI STUFF
 
   users_db:
     image: postgres:16.1
@@ -98,7 +135,9 @@ services:
       - DEAD_KEY_EXPIRY=100000 # how much time should pass before autoclaiming messages?
     networks:
       - pieno-net
-    
+    depends_on:
+      - queue
+
   fuel_meter:
     image: emilianomaccaferri/pieno-fuel-meter
     #deploy:
@@ -114,3 +153,5 @@ services:
       - REDIS_STREAM=streams:notifications
     networks:
       - pieno-net
+    depends_on:
+      - queue
