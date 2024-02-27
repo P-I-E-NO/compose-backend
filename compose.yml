@@ -8,7 +8,6 @@ volumes:
   predictions_db_data:
 
 services:
-
   api_gateway:
     image: nginxinc/nginx-unprivileged
     networks:
@@ -103,6 +102,20 @@ services:
       - RUST_LOG=trace
       - JWT_SECRET=Poggaceo
 
+  messenger:
+    depends_on:
+      users_db:
+        condition: service_healthy
+    image: emilianomaccaferri/pieno-messenger:v1.0.0-save-notifications
+    environment:
+      - DB_CONNECTION_STRING=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
+      - SERVICE_ACCOUNT_PATH=/code/firebase/pieno-app-firebase-adminsdk-v437b-0e77967c6f.json
+      - JWT_KEY=Poggaceo
+    networks:
+      - pieno-net
+    volumes:
+      - ./firebase:/code/firebase
+
   cars:
     container_name: cars-app
     image: emilianomaccaferri/pieno-cars:latest
@@ -122,7 +135,7 @@ services:
       - pieno-net
 
   fuel_notifier: 
-    image: emilianomaccaferri/pieno-fuel-notifier
+    image: emilianomaccaferri/pieno-fuel-notifier:v1.0.0-first-release
     #deploy:
     #  replicas: 3
     #  mode: dnsrr
@@ -132,11 +145,13 @@ services:
       - STREAM_NAME=streams:notifications
       - REDIS_URL=redis://queue
       - ITEM_COUNT=10
+      - MESSENGER_URI=http://messenger:5050
       - DEAD_KEY_EXPIRY=100000 # how much time should pass before autoclaiming messages?
     networks:
       - pieno-net
     depends_on:
       - queue
+      - messenger
 
   fuel_meter:
     image: emilianomaccaferri/pieno-fuel-meter
