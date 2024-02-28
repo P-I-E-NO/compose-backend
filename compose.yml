@@ -102,19 +102,19 @@ services:
       - RUST_LOG=trace
       - JWT_SECRET=Poggaceo
 
-  messenger:
-    depends_on:
-      users_db:
-        condition: service_healthy
-    image: emilianomaccaferri/pieno-messenger:v1.0.0-fix-permissions
-    environment:
-      - DB_CONNECTION_STRING=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
-      - SERVICE_ACCOUNT_PATH=/code/firebase/pieno-app-firebase-adminsdk-v437b-0e77967c6f.json
-      - JWT_KEY=Poggaceo
-    networks:
-      - pieno-net
-    volumes:
-      - ./firebase:/code/firebase
+  #messenger:
+  #  depends_on:
+  #    users_db:
+  #      condition: service_healthy
+  #  image: emilianomaccaferri/pieno-messenger:v1.0.0-fix-permissions
+  #  environment:
+  #    - DB_CONNECTION_STRING=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
+  #    - SERVICE_ACCOUNT_PATH=/code/firebase/pieno-app-firebase-adminsdk-v437b-0e77967c6f.json
+  #    - JWT_KEY=Poggaceo
+  #  networks:
+  #    - pieno-net
+  #  volumes:
+  #    - ./firebase:/code/firebase
 
   cars:
     container_name: cars-app
@@ -170,3 +170,23 @@ services:
       - pieno-net
     depends_on:
       - queue
+
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    volumes:
+      - ./osrm:/data
+    networks:
+      - pieno-net
+    command: osrm-routed --algorithm mld /data/nord-est-latest.osrm
+
+  api_obtain_data:
+    image: api_obtain_data
+    environment:
+      - MYSQL_USER=fre
+      - MYSQL_PASSWORD=password
+      - MYSQL_DATABASE=pieno
+      - OSRM_SERVER=http://osrm:5000/route/v1/driving
+    networks:
+      - pieno_net
+    ports:
+      - "8083:8080"
