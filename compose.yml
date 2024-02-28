@@ -48,7 +48,7 @@ services:
       retries: 5
 
   predictions_api:
-    image: emilianomaccaferri/pieno-predict-api:latest
+    image: emilianomaccaferri/pieno-predict-api:v1.0.0-arm
     networks:
       - pieno-net
     environment:
@@ -106,7 +106,7 @@ services:
     depends_on:
       users_db:
         condition: service_healthy
-    image: emilianomaccaferri/pieno-messenger:v1.0.0-save-notifications
+    image: emilianomaccaferri/pieno-messenger:v1.0.0-fix-permissions
     environment:
       - DB_CONNECTION_STRING=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
       - SERVICE_ACCOUNT_PATH=/code/firebase/pieno-app-firebase-adminsdk-v437b-0e77967c6f.json
