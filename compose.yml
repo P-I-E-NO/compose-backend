@@ -22,6 +22,9 @@ services:
       - fuel_meter
       - swagger_ui
       - predictions_api
+      - api_obtain_data
+      - api_distributors
+      - api_top_distributors
 
   swagger_ui:
     image: swaggerapi/swagger-ui
@@ -91,7 +94,7 @@ services:
 
   users:
     container_name: users-app
-    image: emilianomaccaferri/pieno-users:latest
+    image: emilianomaccaferri/pieno-users:v1.0.0-creation-date
     depends_on:
       users_db:
         condition: service_healthy
@@ -102,23 +105,22 @@ services:
       - RUST_LOG=trace
       - JWT_SECRET=Poggaceo
 
-  #messenger:
-  #  depends_on:
-  #    users_db:
-  #      condition: service_healthy
-  #  image: emilianomaccaferri/pieno-messenger:v1.0.0-fix-permissions
-  #  environment:
-  #    - DB_CONNECTION_STRING=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
-  #    - SERVICE_ACCOUNT_PATH=/code/firebase/pieno-app-firebase-adminsdk-v437b-0e77967c6f.json
-  #    - JWT_KEY=Poggaceo
-  #  networks:
-  #    - pieno-net
-  #  volumes:
-  #    - ./firebase:/code/firebase
-
+  messenger:
+    depends_on:
+      users_db:
+        condition: service_healthy
+    image: emilianomaccaferri/pieno-messenger:v1.0.0-creation-date
+    environment:
+      - DB_CONNECTION_STRING=postgresql://dockerissimo_rust:pass@users_db:5432/fantastic_db
+      - SERVICE_ACCOUNT_PATH=/code/firebase/pieno-app-firebase-adminsdk-v437b-0e77967c6f.json
+      - JWT_KEY=Poggaceo
+    networks:
+      - pieno-net
+    volumes:
+      - /var/www/cloud/pieno/compose-backend/firebase/pieno-app-firebase-adminsdk-v437b-0e77967c6f.json:/code/firebase/pieno-app-firebase-adminsdk-v437b-0e77967c6f.json
   cars:
     container_name: cars-app
-    image: emilianomaccaferri/pieno-cars:latest
+    image: emilianomaccaferri/pieno-cars:v1.0.0-1000-tokens
     depends_on:
       cars_db:
         condition: service_healthy
@@ -135,18 +137,20 @@ services:
       - pieno-net
 
   fuel_notifier: 
-    image: emilianomaccaferri/pieno-fuel-notifier:v1.0.0-first-release
+    image: emilianomaccaferri/pieno-fuel-notifier:v1.0.0-ok
     #deploy:
     #  replicas: 3
     #  mode: dnsrr
     environment:
       - NOTIFICATION_GROUP=notification_listeners
-      - BLOCK_TIME=60000 # how much should the consumer block for? 
+      - CONSUMER_NAME=notifier-1
+      - BLOCK_TIME=60000 # how much should the consumer block for?
       - STREAM_NAME=streams:notifications
       - REDIS_URL=redis://queue
       - ITEM_COUNT=10
-      - MESSENGER_URI=http://messenger:5050
       - DEAD_KEY_EXPIRY=100000 # how much time should pass before autoclaiming messages?
+      - RUST_LOG=trace
+      - MESSENGER_URI=http://messenger:5050
     networks:
       - pieno-net
     depends_on:
@@ -154,7 +158,7 @@ services:
       - messenger
 
   fuel_meter:
-    image: emilianomaccaferri/pieno-fuel-meter
+    image: emilianomaccaferri/pieno-fuel-meter:v1.0.0-final
     #deploy:
     #  replicas: 3
     #  mode: dnsrr
@@ -162,7 +166,7 @@ services:
       - HTTP_PORT=3000
       - APP_NAME=fuel-meter-api
       - REDIS_URL=redis://queue
-      - JWT_KEY=Poggaceo
+      - JWT_SECRET=Poggaceo
       - RUST_BACKTRACE=1
       - RUST_LOG=trace
       - REDIS_STREAM=streams:notifications
@@ -180,13 +184,38 @@ services:
     command: osrm-routed --algorithm mld /data/nord-est-latest.osrm
 
   api_obtain_data:
-    image: api_obtain_data
+    image: emilianomaccaferri/pieno-obtain-api:v1.0.0-arm
     environment:
       - MYSQL_USER=fre
       - MYSQL_PASSWORD=password
       - MYSQL_DATABASE=pieno
       - OSRM_SERVER=http://osrm:5000/route/v1/driving
     networks:
-      - pieno_net
-    ports:
-      - "8083:8080"
+      - pieno-net
+    depends_on:
+      my_sql:
+        condition: service_healthy
+    
+  api_distributori:
+    image: emilianomaccaferri/pieno-distributors-api:v1.0.0-arm
+    environment:
+      - MYSQL_USER=fre
+      - MYSQL_PASSWORD=password
+      - MYSQL_DATABASE=pieno
+    networks:
+      - pieno-net
+    depends_on:
+      my_sql:
+        condition: service_healthy
+
+  api_top_distributors: 
+    image: emilianomaccaferri/pieno-top-distributors-api:v1.0.0-arm
+    environment:
+      - MYSQL_USER=fre
+      - MYSQL_PASSWORD=password
+      - MYSQL_DATABASE=pieno
+    networks:
+      - pieno-net
+    depends_on:
+      my_sql:
+        condition: service_healthy
