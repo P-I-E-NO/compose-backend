@@ -23,7 +23,7 @@ services:
       - swagger_ui
       - predictions_api
       - api_obtain_data
-      - api_distributors
+      - api_distributori
       - api_top_distributors
 
   swagger_ui:
